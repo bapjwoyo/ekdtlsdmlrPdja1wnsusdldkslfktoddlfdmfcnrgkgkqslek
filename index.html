@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12.3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* 16:9 비율 컨테이너 */
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 페이지 1 스타일 */
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 시작하기 버튼 */
+        .start-button {
+            font-size: 4rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            z-index: 10;
+            position: relative;
+        }
+
+        .start-button:hover {
+            transform: scale(1.1);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                         0 0 40px rgba(255, 255, 255, 0.3);
+        }
+
+        .start-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 메인 텍스트 */
+        .main-text {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 0 2rem;
+            max-width: 90%;
+            transition: font-size 0.3s ease;
+            word-break: keep-all;
+            display: inline-block;
+        }
+
+        /* 물결 효과를 위한 개별 글자 스타일 */
+        .main-text span {
+            display: inline-block;
+            animation: wave 1.5s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* 폭죽 컨테이너 */
+        .confetti-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        /* 폭죽 파티클 */
+        .particle {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: fall 3s linear forwards;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* 하단 크레딧 */
+        .credit {
+            position: absolute;
+            bottom: 2rem;
+            font-size: 1.5rem;
+            color: #fff;
+            transition: opacity 0.5s ease;
+        }
+
+        .credit.hidden {
+            opacity: 0;
+        }
+
+        /* 폭죽 이모지 위치 */
+        .confetti-emoji {
+            position: absolute;
+            font-size: 6rem;
+            animation: pulse 1s ease-in-out infinite;
+            transition: opacity 0.5s ease;
+        }
+
+        .confetti-emoji.hidden {
+            opacity: 0;
+        }
+
+        .confetti-emoji.left {
+            left: 5%;
+            bottom: 15%;
+        }
+
+        .confetti-emoji.right {
+            right: 5%;
+            bottom: 15%;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* 컨트롤 패널 (개발자용) */
+        .controls {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .controls.show {
+            display: block;
+        }
+
+        .controls label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .controls input, .controls textarea {
+            width: 100%;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.25rem;
+            font-family: inherit;
+        }
+
+        .controls textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .controls button {
+            width: 100%;
+            padding: 0.5rem;
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls button:hover {
+            background: #45a049;
+        }
+
+        .text-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .text-item input {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 컨트롤 패널 (Ctrl+E로 토글) -->
+    <div class="controls" id="controls">
+        <h3 style="margin-bottom: 1rem;">설정 패널</h3>
+        
+        <label>텍스트 및 시간 설정:</label>
+        <div id="textItemsContainer"></div>
+        
+        <button onclick="addTextItem()">+ 텍스트 추가</button>
+        <button onclick="updateSettings()">설정 적용</button>
+        <button onclick="resetAnimation()">애니메이션 재시작</button>
+        <button onclick="toggleControls()">닫기 (Ctrl+E)</button>
+    </div>
+
+    <div class="container">
+        <!-- 페이지 1: 시작하기 -->
+        <div class="page active" id="page1">
+            <div class="start-button" onclick="startAnimation()">
+                👉시작하기👈
+            </div>
+            <div class="credit">Made By bapjwoyo</div>
+        </div>
+
+        <!-- 페이지 2: 메인 텍스트 -->
+        <div class="page" id="page2">
+            <!-- 폭죽 컨테이너 -->
+            <div class="confetti-container" id="confettiContainer"></div>
+            
+            <!-- 왼쪽 폭죽 이모지 -->
+            <div class="confetti-emoji left" id="leftConfetti">🎉</div>
+            
+            <!-- 메인 텍스트 -->
+            <div class="main-text" id="mainText">[매인 택스트]</div>
+            
+            <!-- 오른쪽 폭죽 이모지 -->
+            <div class="confetti-emoji right" id="rightConfetti">🎉</div>
+            
+            <div class="credit">Made By bapjwoyo</div>
+        </div>
+    </div>
+
+    <script>
+        // 설정 변수 - 텍스트와 각 텍스트별 표시 시간 (밀리초)
+        let textSettings = [
+            { text: '생일 축하 합니다~ (x2)', duration: 3000 },
+            { text: '계엄 1주년을', duration: 500 },
+            { text: '...당신의 생일을~', duration: 3000 },
+            { text: '생일 축하 합니다~~', duration: 3000 },
+            { text: '(윤모씨: 옛다, 선물이다.)', duration: 500 },
+            { text: '비 상 계 엄', duration: 2000 }
+            ,{ text: 'ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ', duration: 2000 }
+        ];
+        
+        let currentTextIndex = 0;
+        let textTimeoutId = null;
+        let confettiIntervalId = null;
+
+        // 초기 설정 패널 렌더링
+        renderTextItems();
+
+        // 텍스트 아이템 렌더링
+        function renderTextItems() {
+            const container = document.getElementById('textItemsContainer');
+            container.innerHTML = '';
+            
+            textSettings.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'text-item';
+                div.innerHTML = `
+                    <label>텍스트 ${index + 1}:</label>
+                    <input type="text" id="text_${index}" value="${item.text}" placeholder="텍스트 입력">
+                    <label>표시 시간 (밀리초):</label>
+                    <input type="number" id="duration_${index}" value="${item.duration}" min="100" step="100">
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 텍스트 아이템 추가
+        function addTextItem() {
+            textSettings.push({ text: '새 텍스트', duration: 1000 });
+            renderTextItems();
+        }
+
+        // 페이지 전환 함수
+        function startAnimation() {
+            const page1 = document.getElementById('page1');
+            const page2 = document.getElementById('page2');
+            
+            // 페이지 1 숨기기, 페이지 2 보이기
+            page1.classList.remove('active');
+            
+            setTimeout(() => {
+                page2.classList.add('active');
+                startTextAnimation();
+                startConfetti();
+            }, 500);
+        }
+
+        // 텍스트 크기 자동 조절 함수
+        function adjustTextSize(element, text) {
+            const textLength = text.length;
+            let fontSize;
+            
+            // 텍스트 길이에 따라 폰트 크기 조절
+            if (textLength <= 5) {
+                fontSize = 6; // 매우 짧은 텍스트
+            } else if (textLength <= 10) {
+                fontSize = 5.5;
+            } else if (textLength <= 15) {
+                fontSize = 5;
+            } else if (textLength <= 20) {
+                fontSize = 4.5;
+            } else if (textLength <= 30) {
+                fontSize = 4;
+            } else if (textLength <= 40) {
+                fontSize = 3.5;
+            } else if (textLength <= 50) {
+                fontSize = 3;
+            } else {
+                fontSize = 2.5; // 매우 긴 텍스트
+            }
+            
+            element.style.fontSize = fontSize + 'rem';
+        }
+
+        // 텍스트 애니메이션 시작
+        function startTextAnimation() {
+            const mainText = document.getElementById('mainText');
+            currentTextIndex = 0;
+            
+            // 첫 번째 텍스트 표시
+            showText(mainText);
+        }
+
+        // 개별 텍스트 표시 함수
+        function showText(element) {
+            if (currentTextIndex >= textSettings.length) {
+                // 모든 텍스트 표시 완료
+                stopConfetti();
+                return;
+            }
+            
+            const currentSetting = textSettings[currentTextIndex];
+            const text = currentSetting.text;
+            
+            // 텍스트를 개별 글자로 분리하여 물결 효과 적용
+            element.innerHTML = '';
+            const chars = text.split('');
+            chars.forEach((char, index) => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                // 각 글자마다 애니메이션 지연 시간을 다르게 설정
+                span.style.animationDelay = (index * 0.1) + 's';
+                element.appendChild(span);
+            });
+            
+            adjustTextSize(element, text);
+            
+            // 마지막 텍스트인지 확인
+            const isLastText = (currentTextIndex === textSettings.length - 1);
+            
+            if (isLastText) {
+                // 마지막 텍스트일 때 폭죽과 크레딧 숨기기
+                hideConfettiAndCredit();
+            }
+            
+            // 다음 텍스트로 전환
+            textTimeoutId = setTimeout(() => {
+                currentTextIndex++;
+                showText(element);
+            }, currentSetting.duration);
+        }
+
+        // 폭죽과 크레딧 숨기기 함수
+        function hideConfettiAndCredit() {
+            const leftConfetti = document.getElementById('leftConfetti');
+            const rightConfetti = document.getElementById('rightConfetti');
+            const credit = document.querySelector('#page2 .credit');
+            
+            // 페이드 아웃 효과
+            leftConfetti.classList.add('hidden');
+            rightConfetti.classList.add('hidden');
+            credit.classList.add('hidden');
+            
+            // 폭죽 파티클 생성 중지
+            clearInterval(confettiIntervalId);
+        }
+
+        // 폭죽 파티클 생성 함수 (범위 확대)
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            // 랜덤 이모지 선택
+            const emojis = ['🎊', '🎉', '✨', '⭐', '🌟', '💫', '🎈', '🎁', '🎀'];
+            particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            
+            // 랜덤 위치 설정 (이모지 주변 - 범위 확대)
+            const offsetX = (Math.random() - 0.5) * 300; // 100 -> 300으로 확대
+            const offsetY = (Math.random() - 0.5) * 200; // 50 -> 200으로 확대
+            particle.style.left = (x + offsetX) + 'px';
+            particle.style.top = (y + offsetY) + 'px';
+            
+            // 랜덤 애니메이션 지연
+            particle.style.animationDelay = Math.random() * 0.5 + 's';
+            
+            // 랜덤 애니메이션 지속 시간
+            particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+            
+            document.getElementById('confettiContainer').appendChild(particle);
+            
+            // 애니메이션 끝나면 제거
+            setTimeout(() => {
+                particle.remove();
+            }, 4000);
+        }
+
+        // 폭죽 효과 시작
+        function startConfetti() {
+            const leftConfetti = document.getElementById('leftConfetti');
+            const rightConfetti = document.getElementById('rightConfetti');
+            
+            // 폭죽 이모지 위치 가져오기
+            const leftRect = leftConfetti.getBoundingClientRect();
+            const rightRect = rightConfetti.getBoundingClientRect();
+            
+            // 주기적으로 파티클 생성 (더 많이)
+            confettiIntervalId = setInterval(() => {
+                // 왼쪽 폭죽에서 파티클 생성
+                for (let i = 0; i < 5; i++) { // 3 -> 5로 증가
+                    createParticle(leftRect.left + leftRect.width / 2, leftRect.top + leftRect.height / 2);
+                }
+                
+                // 오른쪽 폭죽에서 파티클 생성
+                for (let i = 0; i < 5; i++) { // 3 -> 5로 증가
+                    createParticle(rightRect.left + rightRect.width / 2, rightRect.top + rightRect.height / 2);
+                }
+            }, 150); // 200 -> 150으로 더 자주 생성
+        }
+
+        // 폭죽 효과 중지
+        function stopConfetti() {
+            clearInterval(confettiIntervalId);
+            
+            // 3초 후 모든 파티클 제거
+            setTimeout(() => {
+                const particles = document.querySelectorAll('.particle');
+                particles.forEach(p => p.remove());
+            }, 3000);
+        }
+
+        // 설정 업데이트 함수
+        function updateSettings() {
+            const newSettings = [];
+            
+            // 모든 텍스트 아이템에서 값 가져오기
+            for (let i = 0; i < textSettings.length; i++) {
+                const textInput = document.getElementById(`text_${i}`);
+                const durationInput = document.getElementById(`duration_${i}`);
+                
+                if (textInput && durationInput) {
+                    newSettings.push({
+                        text: textInput.value,
+                        duration: parseInt(durationInput.value) || 1000
+                    });
+                }
+            }
+            
+            if (newSettings.length > 0) {
+                textSettings = newSettings;
+                alert('설정이 적용되었습니다! 애니메이션을 재시작하세요.');
+            }
+        }
+
+        // 애니메이션 재시작 함수
+        function resetAnimation() {
+            // 기존 타이머 정리
+            clearTimeout(textTimeoutId);
+            clearInterval(confettiIntervalId);
+            
+            // 파티클 제거
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach(p => p.remove());
+            
+            // 폭죽과 크레딧 다시 보이기
+            const leftConfetti = document.getElementById('leftConfetti');
+            const rightConfetti = document.getElementById('rightConfetti');
+            const credit = document.querySelector('#page2 .credit');
+            leftConfetti.classList.remove('hidden');
+            rightConfetti.classList.remove('hidden');
+            credit.classList.remove('hidden');
+            
+            // 페이지 1로 돌아가기
+            const page1 = document.getElementById('page1');
+            const page2 = document.getElementById('page2');
+            
+            page2.classList.remove('active');
+            setTimeout(() => {
+                page1.classList.add('active');
+            }, 500);
+        }
+
+        // 컨트롤 패널 토글 (Ctrl+E)
+        function toggleControls() {
+            const controls = document.getElementById('controls');
+            controls.classList.toggle('show');
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                toggleControls();
+            }
+        });
+
+        // 윈도우 리사이즈 시 파티클 위치 재계산
+        window.addEventListener('resize', () => {
+            if (confettiIntervalId) {
+                clearInterval(confettiIntervalId);
+                startConfetti();
+            }
+        });
+    </script>
+</body>
+</html>
